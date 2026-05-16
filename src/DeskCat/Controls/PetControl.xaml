@@ -1,0 +1,19 @@
+<UserControl x:Class="DeskCat.Controls.PetControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Width="{Binding PetSize}"
+             Height="{Binding PetSize}">
+  <Grid Width="{Binding PetSize}" Height="{Binding PetSize}">
+    <Image Source="{Binding CurrentFrame}"
+           Width="{Binding PetSize}"
+           Height="{Binding PetSize}"
+           Stretch="Uniform"
+           RenderOptions.BitmapScalingMode="NearestNeighbor"
+           SnapsToDevicePixels="True"
+           RenderTransformOrigin="0.5,0.5">
+      <Image.RenderTransform>
+        <ScaleTransform ScaleX="{Binding FacingScale}" ScaleY="1" />
+      </Image.RenderTransform>
+    </Image>
+  </Grid>
+</UserControl>
