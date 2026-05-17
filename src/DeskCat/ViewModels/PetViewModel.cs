@@ -14,9 +14,7 @@ public sealed class PetViewModel : BindableBase, IDisposable
     private readonly StateMachine _stateMachine = new();
     private readonly DispatcherTimer _updateTimer;
     private readonly Random _random = new();
-    private readonly TimeSpan _saveInterval = TimeSpan.FromSeconds(20);
     private DateTime _lastUpdate = DateTime.Now;
-    private DateTime _lastSave = DateTime.Now;
     private DateTime _nextAutoTransitionAt = DateTime.Now;
     private ImageSource? _currentFrame;
     private PetState _state = PetState.Idle;
@@ -53,10 +51,18 @@ public sealed class PetViewModel : BindableBase, IDisposable
 
     public void InitializePosition()
     {
-        var workArea = SystemParameters.WorkArea;
-        // 让猫的实际内容右下角对齐屏幕右下角
-        Left = workArea.Right - ContentMarginLeft - ContentWidth;
-        Top = workArea.Bottom - ContentMarginTop - ContentHeight;
+        if (Attributes.HasSavedPosition)
+        {
+            Left = Attributes.SavedLeft;
+            Top = Attributes.SavedTop;
+            ClampToWorkArea();
+        }
+        else
+        {
+            var workArea = SystemParameters.WorkArea;
+            Left = workArea.Right - ContentMarginLeft - ContentWidth;
+            Top = workArea.Bottom - ContentMarginTop - ContentHeight;
+        }
     }
 
     public PetAttributes Attributes { get; }
@@ -242,6 +248,8 @@ public sealed class PetViewModel : BindableBase, IDisposable
 
     public void Save()
     {
+        Attributes.SavedLeft = Left;
+        Attributes.SavedTop = Top;
         _attributeService.Save(Attributes);
     }
 
@@ -287,12 +295,6 @@ public sealed class PetViewModel : BindableBase, IDisposable
             {
                 AutoTransition();
             }
-        }
-
-        if (now - _lastSave >= _saveInterval)
-        {
-            Save();
-            _lastSave = now;
         }
     }
 
