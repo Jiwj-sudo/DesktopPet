@@ -29,6 +29,7 @@ public partial class MainWindow : System.Windows.Window, IDisposable
         MouseLeftButtonDown += OnMouseLeftButtonDown;
         MouseMove += OnMouseMove;
         MouseLeftButtonUp += OnMouseLeftButtonUp;
+        Loaded += OnWindowLoaded;
 
         _trayService = new TrayService(
             feed: () => Dispatcher.Invoke(_viewModel.Feed),
@@ -231,6 +232,17 @@ public partial class MainWindow : System.Windows.Window, IDisposable
             ? screen
             : source.CompositionTarget.TransformFromDevice.Transform(screen);
     }
+
+    private void OnWindowLoaded(object sender, RoutedEventArgs e)
+    {
+        var workArea = SystemParameters.WorkArea;
+        // 让猫的实际内容右下角对齐屏幕右下角
+        Left = workArea.Right - _viewModel.ContentMarginLeft - _viewModel.ContentWidth;
+        Top = workArea.Bottom - _viewModel.ContentMarginTop - _viewModel.ContentHeight;
+        _viewModel.MoveDragged(Left, Top);
+    }
+
+    private double PetSize => _viewModel.PetSize;
 
     private void ToggleVisible()
     {

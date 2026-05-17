@@ -33,7 +33,8 @@ public sealed class MovementService
             _direction = -1;
         }
 
-        var groundY = Math.Max(bounds.Top, bounds.Bottom - petSize.Height - 8);
+        // 保持当前Y坐标，只在地面行走
+        var groundY = Math.Max(bounds.Top, bounds.Bottom - petSize.Height);
         return new System.Windows.Point(nextX, groundY);
     }
 }

@@ -3,8 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:DeskCat.Controls"
         Title="DeskCat"
-        Width="{Binding PetSize}"
-        Height="{Binding PetSize}"
+        SizeToContent="WidthAndHeight"
         Left="{Binding Left, Mode=TwoWay}"
         Top="{Binding Top, Mode=TwoWay}"
         Topmost="{Binding IsTopmost}"
@@ -12,8 +11,7 @@
         Background="Transparent"
         ResizeMode="NoResize"
         WindowStyle="None"
-        ShowInTaskbar="False"
-        SizeToContent="Manual">
+        ShowInTaskbar="False">
   <Grid Background="Transparent">
     <controls:PetControl />
   </Grid>

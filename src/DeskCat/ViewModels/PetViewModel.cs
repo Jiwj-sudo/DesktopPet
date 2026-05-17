@@ -3,7 +3,6 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using DeskCat.Models;
 using DeskCat.Services;
-using Forms = System.Windows.Forms;
 
 namespace DeskCat.ViewModels;
 
@@ -41,7 +40,6 @@ public sealed class PetViewModel : BindableBase, IDisposable
         _animationService.FrameChanged += (_, frame) => CurrentFrame = frame;
         _animationService.AnimationCompleted += (_, state) => OnAnimationCompleted(state);
 
-        InitializePosition();
         _animationService.Play(PetState.Idle);
         ScheduleNextAutoTransition(PetState.Idle);
 
@@ -53,8 +51,26 @@ public sealed class PetViewModel : BindableBase, IDisposable
         _updateTimer.Start();
     }
 
+    public void InitializePosition()
+    {
+        var workArea = SystemParameters.WorkArea;
+        // 让猫的实际内容右下角对齐屏幕右下角
+        Left = workArea.Right - ContentMarginLeft - ContentWidth;
+        Top = workArea.Bottom - ContentMarginTop - ContentHeight;
+    }
+
     public PetAttributes Attributes { get; }
     public double PetSize { get; } = 256;
+
+    // 猫实际内容在窗口中的边距（透明区域大小）
+    public double ContentMarginLeft { get; } = 70;   // 左边透明约70
+    public double ContentMarginTop { get; } = 0;     // 上边无透明（猫头顶贴边）
+    public double ContentMarginRight { get; } = 70;   // 右边透明约70
+    public double ContentMarginBottom { get; } = 130; // 下边透明约130（爪子下方空间大）
+
+    // 猫实际内容大小
+    public double ContentWidth => PetSize - ContentMarginLeft - ContentMarginRight;  // ~116
+    public double ContentHeight => PetSize - ContentMarginTop - ContentMarginBottom; // ~126
 
     public ImageSource? CurrentFrame
     {
@@ -127,8 +143,25 @@ public sealed class PetViewModel : BindableBase, IDisposable
 
     public void MoveDragged(double left, double top)
     {
-        Left = left;
-        Top = top;
+        var workArea = SystemParameters.WorkArea;
+        // 约束的是猫的实际内容边界，不是窗口边界
+        Left = Math.Clamp(left,
+            workArea.Left - ContentMarginLeft,
+            workArea.Right - ContentMarginLeft - ContentWidth);
+        Top = Math.Clamp(top,
+            workArea.Top - ContentMarginTop,
+            workArea.Bottom - ContentMarginTop - ContentHeight);
+    }
+
+    public void ClampToWorkArea()
+    {
+        var workArea = SystemParameters.WorkArea;
+        Left = Math.Clamp(Left,
+            workArea.Left - ContentMarginLeft,
+            workArea.Right - ContentMarginLeft - ContentWidth);
+        Top = Math.Clamp(Top,
+            workArea.Top - ContentMarginTop,
+            workArea.Bottom - ContentMarginTop - ContentHeight);
     }
 
     public void EndDrag()
@@ -230,14 +263,21 @@ public sealed class PetViewModel : BindableBase, IDisposable
 
         if (State == PetState.Walk && AllowWalk)
         {
+            // 行走时传入内容大小和边距，让 MovementService 能正确计算
+            var contentBounds = new System.Windows.Rect(
+                GetCurrentWorkArea().Left + ContentMarginLeft,
+                GetCurrentWorkArea().Top + ContentMarginTop,
+                ContentWidth,
+                ContentHeight);
             var position = _movementService.Update(
-                new System.Windows.Point(Left, Top),
-                new System.Windows.Size(PetSize, PetSize),
-                GetCurrentWorkArea(),
+                new System.Windows.Point(Left + ContentMarginLeft, Top + ContentMarginTop),
+                new System.Windows.Size(ContentWidth, ContentHeight),
+                contentBounds,
                 elapsed);
-            Left = position.X;
-            Top = position.Y;
+            Left = position.X - ContentMarginLeft;
+            Top = position.Y - ContentMarginTop;
             FacingScale = _movementService.FacingScale;
+            ClampToWorkArea();
         }
 
         if (!_isDragging)
@@ -365,37 +405,18 @@ public sealed class PetViewModel : BindableBase, IDisposable
             or PetState.Curious or PetState.Drag or PetState.Fall or PetState.Pet;
     }
 
-    private void InitializePosition()
-    {
-        var bounds = GetPrimaryWorkArea();
-        Left = bounds.Left + (bounds.Width - PetSize) / 2;
-        Top = Math.Max(bounds.Top, bounds.Bottom - PetSize - 8);
-    }
-
     private void SnapToGround()
     {
-        var bounds = GetCurrentWorkArea();
-        Left = Math.Clamp(Left, bounds.Left, Math.Max(bounds.Left, bounds.Right - PetSize));
-        Top = Math.Max(bounds.Top, bounds.Bottom - PetSize - 8);
+        ClampToWorkArea();
     }
 
     private System.Windows.Rect GetCurrentWorkArea()
     {
-        var center = new System.Drawing.Point(
-            (int)Math.Round(Left + PetSize / 2),
-            (int)Math.Round(Top + PetSize / 2));
-        return ToRect(Forms.Screen.FromPoint(center).WorkingArea);
+        return SystemParameters.WorkArea;
     }
 
     private static System.Windows.Rect GetPrimaryWorkArea()
     {
-        var workingArea = Forms.Screen.PrimaryScreen?.WorkingArea
-            ?? Forms.Screen.AllScreens.First().WorkingArea;
-        return ToRect(workingArea);
-    }
-
-    private static System.Windows.Rect ToRect(System.Drawing.Rectangle rectangle)
-    {
-        return new System.Windows.Rect(rectangle.Left, rectangle.Top, rectangle.Width, rectangle.Height);
+        return SystemParameters.WorkArea;
     }
 }
